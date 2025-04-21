@@ -20,6 +20,5 @@ require("lazy").setup({
 			vim.cmd.colorscheme = "vscode"
 		end,
 	},
-	{ import = "cores/plugins" },
 	{ import = "plugins" },
 })
