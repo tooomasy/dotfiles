@@ -15,6 +15,8 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 	{
 		"Mofiqul/vscode.nvim",
+		lazy = false,
+		priority = 1000,
 		config = function()
 			require("vscode").load()
 			vim.cmd.colorscheme = "vscode"
