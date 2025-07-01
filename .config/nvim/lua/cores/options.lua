@@ -16,7 +16,22 @@ vim.opt.mouse = "a"
 vim.opt.showmode = false
 
 vim.schedule(function()
-	vim.opt.clipboard = "unnamed"
+	vim.opt.clipboard = "unnamedplus"
+
+	if vim.fn.has("wsl") == 1 then
+		vim.g.clipboard = {
+			name = "win32yank-wsl",
+			copy = {
+				["+"] = "win32yank.exe -i --crlf",
+				["*"] = "win32yank.exe -i --crlf",
+			},
+			paste = {
+				["+"] = "win32yank.exe -o --lf",
+				["*"] = "win32yank.exe -o --lf",
+			},
+			cache_enabled = 0,
+		}
+	end
 end)
 
 vim.opt.breakindent = true
@@ -60,3 +75,5 @@ vim.keymap.set("n", "<M-h>", "<C-w><C-h>", { desc = "Move focus to the left wind
 vim.keymap.set("n", "<M-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
 vim.keymap.set("n", "<M-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
 vim.keymap.set("n", "<M-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
+
+vim.keymap.set("n", "G", "Gzz", { noremap = true }) -- Go to bottom and center

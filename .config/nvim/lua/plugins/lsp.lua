@@ -167,6 +167,7 @@ return {
 						client
 						and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf)
 					then
+						vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 						map("<leader>th", function()
 							vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 						end, "[T]oggle Inlay [H]ints")
@@ -299,7 +300,7 @@ return {
 		},
 	},
 
-	{ -- Autocompletion
+	{
 		"saghen/blink.cmp",
 		event = "VimEnter",
 		version = "1.*",
@@ -309,9 +310,6 @@ return {
 				"L3MON4D3/LuaSnip",
 				version = "2.*",
 				build = (function()
-					-- Build Step is needed for regex support in snippets.
-					-- This step is not supported in many windows environments.
-					-- Remove the below condition to re-enable on windows.
 					if vim.fn.has("win32") == 1 or vim.fn.executable("make") == 0 then
 						return
 					end
@@ -332,40 +330,76 @@ return {
 		--- @module 'blink.cmp'
 		--- @type blink.cmp.Config
 		opts = {
+			appearance = {
+				use_nvim_cmp_as_default = true,
+				nerd_font_variant = "mono",
+			},
 			keymap = {
 				preset = "default",
 				["<Tab>"] = {
 					function(cmp)
-						if cmp.snippet_active() then
-							return cmp.accept()
+						local luasnip = require("luasnip")
+						if luasnip.expandable() then
+							return luasnip.expand() -- Expand snippet if expandable
+						elseif luasnip.jumpable(1) then
+							return luasnip.jump(1) -- Jump to next placeholder
+						elseif cmp.snippet_active() then
+							return cmp.accept() -- Accept snippet if no placeholders remain
 						else
-							return cmp.select_and_accept()
+							return cmp.select_and_accept() -- Select and accept completion
 						end
 					end,
 					"snippet_forward",
 					"fallback",
 				},
+				["<S-Tab>"] = {
+					function()
+						local luasnip = require("luasnip")
+						if luasnip.jumpable(-1) then
+							return luasnip.jump(-1) -- Jump to previous placeholder
+						end
+					end,
+					"snippet_backward",
+					"fallback",
+				},
 			},
-
-			appearance = {
-				nerd_font_variant = "mono",
-			},
-
 			completion = {
-				documentation = { auto_show = true, auto_show_delay_ms = 500 },
+				documentation = { auto_show = true, auto_show_delay_ms = 10 },
 			},
-
 			sources = {
 				default = { "lsp", "path", "snippets", "lazydev" },
 				providers = {
 					lazydev = { module = "lazydev.integrations.blink", score_offset = 100 },
 				},
 			},
-
 			snippets = { preset = "luasnip" },
 			fuzzy = { implementation = "lua" },
-
 			signature = { enabled = true },
+		},
+		config = function(_, opts)
+			local cmp = require("blink.cmp")
+			cmp.setup(opts)
+			-- Clear snippet session when leaving insert mode to prevent re-jumping to placeholders
+			vim.api.nvim_create_autocmd("InsertLeave", {
+				group = vim.api.nvim_create_augroup("blink-cmp-snippet-reset", { clear = true }),
+				callback = function()
+					local luasnip = require("luasnip")
+					if luasnip.in_snippet() then
+						luasnip.unlink_current() -- Clear the current snippet session
+					end
+				end,
+			})
+		end,
+	},
+	{
+		"numToStr/Comment.nvim",
+		opts = {
+			toggler = {
+				line = "<C-c>",
+			},
+			opleader = {
+				line = "<C-c>",
+			},
 		},
 	},
 }

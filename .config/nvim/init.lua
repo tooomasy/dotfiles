@@ -14,12 +14,48 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
 	{
-		"Mofiqul/vscode.nvim",
 		lazy = false,
 		priority = 1000,
+		"Mofiqul/vscode.nvim",
 		config = function()
-			require("vscode").load()
-			vim.cmd.colorscheme = "vscode"
+			vim.o.background = "dark"
+
+			local c = require("vscode.colors").get_colors()
+			c.vscDarkBg = "#181818"
+
+			require("vscode").setup({
+				-- Underline `@markup.link.*` variants
+				underline_links = true,
+				disable_nvimtree_bg = true,
+				terminal_colors = true,
+
+				color_overrides = {
+					vscLineNumber = "#6e7681",
+					vscPopupFront = "#cccccc",
+					vscSplitDark = "#2b2b2b",
+
+					vscBlue = "#749bd1",
+					vscBlueGreen = "#82c6b1",
+					vscLightBlue = "#b4dafa",
+					vscAccentBlue = "#81bff9",
+
+					vscYellow = "#dbdcaf",
+					vscYellowOrange = "#f1d84a",
+
+					vscPink = "#b78abc",
+				},
+
+				group_overrides = {
+					Cursor = { fg = c.vscDarkBlue, bg = c.vscLightGreen, bold = true },
+					LspInlayHint = { fg = "#969696", bg = "#262626" },
+					NeoTreeNormal = { fg = "NONE", bg = c.vscDarkBg },
+					NeoTreeNormalNC = { fg = "NONE", bg = c.vscDarkBg },
+
+					RainbowDelimiterViolet = { fg = "#c578d0", bg = "NONE" },
+				},
+			})
+			vim.cmd.colorscheme("vscode")
+			vim.cmd("highlight MsgArea guibg=#181818 gui=bold guisp=NONE")
 		end,
 	},
 	{ import = "plugins" },
