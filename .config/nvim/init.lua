@@ -15,6 +15,11 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 	{
 		lazy = false,
+		opts = {
+			rocks = {
+				enable = false,
+			},
+		},
 		priority = 1000,
 		"Mofiqul/vscode.nvim",
 		config = function()

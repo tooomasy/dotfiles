@@ -14,6 +14,7 @@ vim.o.tabstop = 2
 vim.opt.mouse = "a"
 
 vim.opt.showmode = false
+vim.opt.wrap = false
 
 vim.schedule(function()
 	vim.opt.clipboard = "unnamedplus"
@@ -57,7 +58,7 @@ vim.opt.inccommand = "split"
 vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+-- vim.opt.scrolloff = 10
 
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
@@ -77,3 +78,14 @@ vim.keymap.set("n", "<M-j>", "<C-w><C-j>", { desc = "Move focus to the lower win
 vim.keymap.set("n", "<M-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
 
 vim.keymap.set("n", "G", "Gzz", { noremap = true }) -- Go to bottom and center
+
+vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, { desc = "[E]xpand diagnostic message" })
+
+-- gd: 保持原樣（同視窗跳轉）
+vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to Definition" })
+
+-- gD: 複製 VS Code 的 "Open Definition to the Side" (開在新 Pane)
+vim.keymap.set("n", "gD", function()
+	vim.cmd("vsplit")
+	vim.lsp.buf.definition()
+end, { desc = "Open Definition to the Side" })
