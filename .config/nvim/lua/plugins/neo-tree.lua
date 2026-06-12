@@ -14,7 +14,7 @@ return {
 		enable_git_status = false,
 		default_component_configs = {
 			indent = {
-				padding = 2,
+				padding = 4,
 			},
 		},
 		filesystem = {
@@ -25,10 +25,27 @@ return {
 				hide_hidden = false,
 			},
 			follow_current_file = {
-				enabled = false, -- This will find and focus the file in the active buffer every time
-				leave_dirs_open = false, -- `false` closes auto expanded dirs, such as with `:Neotree reveal`
+				enabled = true, -- This will find and focus the file in the active buffer every time
+				leave_dirs_open = true, -- `false` closes auto expanded dirs, such as with `:Neotree reveal`
 			},
 			use_libuv_file_watcher = true,
+
+			commands = {
+				-- Custom command to open oil.nvim in a floating window
+				open_oil = function(state)
+					local node = state.tree:get_node()
+					local path = node:get_id() -- Get the current node's path
+					if node.type == "file" then
+						path = vim.fn.fnamemodify(path, ":h") -- Use parent directory for files
+					end
+					vim.cmd("Oil --float " .. path)
+				end,
+			},
+			window = {
+				mappings = {
+					["i"] = "open_oil", -- Map 'i' in Neo-tree to open oil.nvim in float
+				},
+			},
 		},
 	},
 }
