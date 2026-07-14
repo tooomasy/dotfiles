@@ -6,11 +6,8 @@ return {
 	config = function()
 		require("telescope").load_extension("project")
 
-		vim.keymap.set(
-			"n",
-			"<M-P>",
-			":lua require'telescope'.extensions.project.project{}<CR>",
-			{ noremap = true, silent = true }
-		)
+		vim.keymap.set("n", "<M-P>", function()
+			require("telescope").extensions.project.project({})
+		end, { noremap = true, silent = true, desc = "Telescope Projects" })
 	end,
 }

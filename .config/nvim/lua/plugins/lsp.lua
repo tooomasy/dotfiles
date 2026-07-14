@@ -14,9 +14,10 @@ return {
 	-- 1. Treesitter
 	{
 		"nvim-treesitter/nvim-treesitter",
+		branch = "main",
 		build = ":TSUpdate",
 		config = function()
-			require("nvim-treesitter.configs").setup({
+			require("nvim-treesitter").setup({
 				ensure_installed = {
 					"bash",
 					"c",
@@ -50,24 +51,17 @@ return {
 	{
 		"williamboman/mason.nvim",
 		dependencies = {
-			"williamboman/mason-lspconfig.nvim",
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 		},
 		config = function()
 			require("mason").setup()
+
 			require("mason-tool-installer").setup({
 				ensure_installed = {
-					"lua_ls",
-					"pyright",
 					"clangd",
-					"ts_ls",
-					"rust_analyzer",
 					"stylua",
-					"black",
-					"prettier",
-					"eslint_d",
 				},
-				auto_update = true,
+				auto_update = false,
 			})
 		end,
 	},
@@ -94,11 +88,11 @@ return {
 						},
 					},
 				},
-				-- pyright = {
-				-- 	settings = {
-				-- 		python = { analysis = { autoSearchPaths = true, diagnosticMode = "workspace" } },
-				-- 	},
-				-- },
+				pyright = {
+					settings = {
+						python = { analysis = { autoSearchPaths = true, diagnosticMode = "workspace" } },
+					},
+				},
 				clangd = {
 					cmd = { "clangd", "--background-index", "--clang-tidy" },
 				},
@@ -110,9 +104,25 @@ return {
 				},
 			}
 
+			-- 💡 0.11+ 現代化安全啟用邏輯
 			for name, opts in pairs(servers) do
 				vim.lsp.config(name, vim.tbl_deep_extend("force", { capabilities = capabilities }, opts))
-				vim.lsp.enable(name)
+
+				-- 對應二進位檔名稱對照，防止未安裝時後台報錯
+				local exe = name
+				if name == "ts_ls" then
+					exe = "typescript-language-server"
+				end
+				if name == "lua_ls" then
+					exe = "lua-language-server"
+				end
+				if name == "rust_analyzer" then
+					exe = "rust-analyzer"
+				end
+
+				if vim.fn.executable(exe) == 1 then
+					vim.lsp.enable(name)
+				end
 			end
 
 			vim.api.nvim_create_autocmd("LspAttach", {
@@ -125,15 +135,37 @@ return {
 					end
 
 					map("n", "gd", vim.lsp.buf.definition, "Goto Definition")
-					map("n", "gr", vim.lsp.buf.references, "References")
+					-- map("n", "gr", vim.lsp.buf.references, "References")
+					map("n", "gr", function()
+						require("telescope.builtin").lsp_references()
+					end, "References")
 					map("n", "K", vim.lsp.buf.hover, "Hover Documentation")
 					map("n", "<leader>rn", vim.lsp.buf.rename, "Rename")
 					map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, "Code Action")
 
-					if client and client.supports_method("textDocument/inlayHint") then
+					-- 💡 現代化診斷整合快捷鍵
+					map("n", "<leader>d", vim.diagnostic.open_float, "Show Line Diagnostics")
+					map("n", "[d", vim.diagnostic.goto_prev, "Previous Diagnostic")
+					map("n", "]d", vim.diagnostic.goto_next, "Next Diagnostic")
+
+					if client and client:supports_method("textDocument/inlayHint") then
 						vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
 					end
 				end,
+			})
+
+			vim.diagnostic.config({
+				-- signs = {
+				-- 	text = {
+				-- 		[vim.diagnostic.severity.ERROR] = "✘", -- 紅叉
+				-- 		[vim.diagnostic.severity.WARN] = "▲", -- 黃驚嘆
+				-- 		[vim.diagnostic.severity.INFO] = "●",
+				-- 		[vim.diagnostic.severity.HINT] = "",
+				-- 	},
+				-- },
+				virtual_text = true, -- 在行尾顯示文字提示
+				underline = true,
+				update_in_insert = false,
 			})
 		end,
 	},
@@ -152,10 +184,10 @@ return {
 		},
 	},
 
-	-- 5. Completion ── blink.cmp (FIXED SECTION)
+	-- 5. Completion ── blink.cmp
 	{
 		"saghen/blink.cmp",
-		version = "*", -- Ensure stable version
+		version = "*",
 		opts = {
 			keymap = { preset = "super-tab" },
 
@@ -163,15 +195,12 @@ return {
 				list = {
 					selection = {
 						preselect = false,
-						-- CRITICAL FIX: Changing auto_insert to false stops the
-						-- start_col/end_col error by preventing "ghost" text edits.
 						auto_insert = false,
 					},
 				},
 				menu = { auto_show = true },
 				documentation = { auto_show = true, auto_show_delay_ms = 200 },
 				accept = {
-					-- Disable auto-brackets to avoid conflict with LSP-inserted brackets
 					auto_brackets = { enabled = false },
 				},
 			},
@@ -181,11 +210,16 @@ return {
 				providers = {
 					snippets = { score_offset = 10 },
 					lsp = { score_offset = 5 },
+					buffer = {
+						opts = {
+							max_file_size_bytes = 1024 * 1024, -- 💡 效能優化：不掃描大於 1MB 的檔案
+						},
+					},
 				},
 			},
 
 			snippets = {
-				preset = "default", -- Uses Neovim's native vim.snippet
+				preset = "default",
 			},
 		},
 	},
