@@ -1,8 +1,14 @@
+# Created by newuser for 5.9
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
+eval "$(/usr/sbin/wsl2-ssh-agent)"
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
@@ -106,3 +112,18 @@ source $ZSH/oh-my-zsh.sh
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 export PATH="/home/linuxbrew/.linuxbrew/opt/glibc/bin:$PATH"
 export PATH="/home/linuxbrew/.linuxbrew/opt/glibc/sbin:$PATH"
+
+eval "$(zoxide init zsh)"
+
+# tmux resurrect related startup config
+rtmux() {
+    if tmux has-session 2>/dev/null; then
+        tmux attach-session
+    else
+        tmux new-session -d -s main
+        tmux run-shell ~/.tmux/plugins/tmux-resurrect/scripts/restore.sh
+        tmux attach-session -t main
+    fi
+}
+
+alias tmux=rtmux

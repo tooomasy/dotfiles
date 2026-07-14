@@ -89,3 +89,45 @@ vim.keymap.set("n", "gD", function()
 	vim.cmd("vsplit")
 	vim.lsp.buf.definition()
 end, { desc = "Open Definition to the Side" })
+
+-- -- 建立一個自動命令，確保每次換主題或啟動時都會修正背景色
+-- vim.api.nvim_create_autocmd({ "ColorScheme", "VimEnter" }, {
+-- 	pattern = "*",
+-- 	callback = function()
+-- 		-- 將行號欄、標記欄、狀態欄位的背景全部設為透明/無背景（NONE）
+-- 		vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
+-- 		vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
+-- 		vim.api.nvim_set_hl(0, "StatusColumn", { bg = "NONE" })
+--
+-- 		-- 如果你是使用 neo-tree，也可以強制修正其左側欄位高亮
+-- 		vim.api.nvim_set_hl(0, "NeoTreeSignColumn", { bg = "NONE" })
+-- 	end,
+-- })
+
+-- vim.opt.statuscolumn = "    "
+-- vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+-- 	callback = function()
+-- 		local separator = " ▎     "
+-- 		vim.opt.statuscolumn = '%s%=%#LineNr4#%{(v:relnum >= 4)?v:relnum."'
+-- 			.. separator
+-- 			.. '":""}'
+-- 			.. '%#LineNr3#%{(v:relnum == 3)?v:relnum."'
+-- 			.. separator
+-- 			.. '":""}'
+-- 			.. '%#LineNr2#%{(v:relnum == 2)?v:relnum."'
+-- 			.. separator
+-- 			.. '":""}'
+-- 			.. '%#LineNr1#%{(v:relnum == 1)?v:relnum."'
+-- 			.. separator
+-- 			.. '":""}'
+-- 			.. '%#LineNr0#%{(v:relnum == 0)?v:lnum." '
+-- 			.. separator
+-- 			.. '":""}'
+--
+-- 		vim.cmd("highlight LineNr0 guifg=#dedede")
+-- 		vim.cmd("highlight LineNr1 guifg=#bdbdbd")
+-- 		vim.cmd("highlight LineNr2 guifg=#9c9c9c")
+-- 		vim.cmd("highlight LineNr3 guifg=#7b7b7b")
+-- 		vim.cmd("highlight LineNr4 guifg=#5a5a5a")
+-- 	end,
+-- })

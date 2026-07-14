@@ -1,29 +1,15 @@
 return {
 	"numToStr/Comment.nvim",
-	event = { "BufReadPost", "BufNewFile" },
-	dependencies = {
-		"nvim-treesitter/nvim-treesitter",
-	},
 	opts = {
-		padding = true,
-		sticky = true,
-		ignore = "^$",
-		toggler = {
-			line = "<C-/>",
-			block = "gbc",
-		},
-		opleader = {
-			line = "<C-/>",
-			block = "gb",
-		},
+		-- Add any custom configurations here if needed
 	},
-	config = function(_, opts)
-		require("Comment").setup(opts)
+	config = function()
+		local ft = require("Comment.ft")
+		ft.set("cpp", { "//%s", "/*%s*/" })
 
-		-- 支援終端常見的 Ctrl + / → <C-_> 轉發
-		vim.keymap.set("n", "<C-/>", "gcc", { remap = true, silent = true })
-		vim.keymap.set("n", "<C-_>", "gcc", { remap = true, silent = true })
-		vim.keymap.set("x", "<C-/>", "gc", { remap = true, silent = true })
-		vim.keymap.set("x", "<C-_>", "gc", { remap = true, silent = true })
+		vim.keymap.set("n", "<C-_>", "gcc", { remap = true, desc = "Toggle comment line" })
+		vim.keymap.set("n", "<C-/>", "gcc", { remap = true, desc = "Toggle comment line" })
+		vim.keymap.set("v", "<C-_>", "gc", { remap = true, desc = "Toggle comment selection" })
+		vim.keymap.set("v", "<C-/>", "gc", { remap = true, desc = "Toggle comment selection" })
 	end,
 }
