@@ -1,7 +1,3 @@
--- lsp.lua ── Modern Native LSP Setup (Neovim 0.11+ Optimized)
-
--- Emergency Utility: Pressing <Esc> in Normal mode will now also
--- force-stop any "stuck" snippet tracking to prevent Lua errors.
 vim.keymap.set("n", "<Esc>", function()
 	vim.cmd("noh")
 	if vim.snippet then
@@ -15,34 +11,48 @@ return {
 	{
 		"nvim-treesitter/nvim-treesitter",
 		branch = "main",
+		lazy = false,
 		build = ":TSUpdate",
 		config = function()
-			require("nvim-treesitter").setup({
-				ensure_installed = {
-					"bash",
-					"c",
-					"cpp",
-					"css",
-					"html",
-					"javascript",
-					"json",
-					"lua",
-					"luadoc",
-					"markdown",
-					"markdown_inline",
-					"python",
-					"query",
-					"rust",
-					"tsx",
-					"typescript",
-					"vim",
-					"vimdoc",
-					"yaml",
-				},
-				auto_install = true,
-				highlight = { enable = true },
-				indent = { enable = true },
-				incremental_selection = { enable = true },
+			local ts = require("nvim-treesitter")
+
+			ts.setup({
+				install_dir = vim.fn.stdpath("data") .. "/site",
+			})
+
+			ts.install({
+				"c",
+				"cpp",
+				"cmake",
+				"lua",
+				"vim",
+				"vimdoc",
+				"query",
+				"json",
+				"markdown",
+				"markdown_inline",
+			})
+
+			local group = vim.api.nvim_create_augroup("yin-treesitter", {
+				clear = true,
+			})
+
+			vim.api.nvim_create_autocmd("FileType", {
+				group = group,
+				callback = function(args)
+					local filetype = vim.bo[args.buf].filetype
+					local lang = vim.treesitter.language.get_lang(filetype)
+
+					if not lang then
+						return
+					end
+
+					local ok = pcall(vim.treesitter.start, args.buf, lang)
+
+					if ok then
+						vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+					end
+				end,
 			})
 		end,
 	},
@@ -55,7 +65,6 @@ return {
 		},
 		config = function()
 			require("mason").setup()
-
 			require("mason-tool-installer").setup({
 				ensure_installed = {
 					"clangd",
@@ -75,75 +84,112 @@ return {
 		},
 		config = function()
 			require("fidget").setup({})
+
 			local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-			local servers = {
-				lua_ls = {
-					settings = {
-						Lua = {
-							runtime = { version = "LuaJIT" },
-							diagnostics = { globals = { "vim" } },
-							workspace = { checkThirdParty = false, library = vim.api.nvim_get_runtime_file("", true) },
-							completion = { callSnippet = "Replace" },
+			-- Filetype-based LSP enablement
+			local lsp_filetypes = {
+				clangd = { "c", "cpp", "objc", "objcpp", "cuda" },
+				tsc = { "typescript", "javascript", "javascriptreact", "typescriptreact" },
+			}
+
+			-- Configure LSP servers with filetype detection
+			vim.lsp.config("clangd", {
+				cmd = {
+					"clangd",
+					"--background-index",
+					"--clang-tidy",
+					"--header-insertion=iwyu",
+				},
+				filetypes = lsp_filetypes.clangd,
+				root_markers = {
+					".clangd",
+					".clang-tidy",
+					".clang-format",
+					"compile_commands.json",
+					"compile_flags.txt",
+					"CMakePresets.json",
+					".git",
+				},
+				capabilities = capabilities,
+			})
+
+			vim.lsp.config("tsc", {
+				filetypes = lsp_filetypes.ts_ls,
+				root_markers = { "tsconfig.json", "package.json", ".git" },
+				capabilities = capabilities,
+			})
+
+			vim.lsp.config("lua_ls", {
+				settings = {
+					Lua = {
+						runtime = { version = "LuaJIT" },
+						diagnostics = { globals = { "vim" } },
+						workspace = { checkThirdParty = false, library = vim.api.nvim_get_runtime_file("", true) },
+						completion = { callSnippet = "Replace" },
+					},
+				},
+				capabilities = capabilities,
+			})
+
+			vim.lsp.config("pyright", {
+				before_init = function(_, config)
+					local venv_python = config.root_dir .. "/.venv/bin/python"
+					if vim.fn.executable(venv_python) == 1 then
+						config.settings.python.pythonPath = venv_python
+					end
+				end,
+				settings = {
+					python = {
+						analysis = {
+							autoSearchPaths = true,
+							diagnosticMode = "workspace",
+							useLibraryCodeForTypes = true,
 						},
 					},
 				},
-				pyright = {
-					settings = {
-						python = { analysis = { autoSearchPaths = true, diagnosticMode = "workspace" } },
-					},
+				capabilities = capabilities,
+			})
+
+			vim.lsp.config("rust_analyzer", {
+				settings = {
+					["rust-analyzer"] = { check = { command = "clippy" } },
 				},
-				clangd = {
-					cmd = { "clangd", "--background-index", "--clang-tidy" },
-				},
-				ts_ls = {},
-				rust_analyzer = {
-					settings = {
-						["rust-analyzer"] = { check = { command = "clippy" } },
-					},
-				},
-			}
+				capabilities = capabilities,
+			})
 
-			-- 💡 0.11+ 現代化安全啟用邏輯
-			for name, opts in pairs(servers) do
-				vim.lsp.config(name, vim.tbl_deep_extend("force", { capabilities = capabilities }, opts))
+			-- Enable LSP servers only for their filetypes
+			local group = vim.api.nvim_create_augroup("yin-lsp-enable", { clear = true })
+			vim.api.nvim_create_autocmd("FileType", {
+				group = group,
+				callback = function(event)
+					local filetype = vim.bo[event.buf].filetype
+					for server, filetypes in pairs(lsp_filetypes) do
+						if vim.list_contains(filetypes, filetype) then
+							vim.lsp.enable(server)
+						end
+					end
+				end,
+			})
 
-				-- 對應二進位檔名稱對照，防止未安裝時後台報錯
-				local exe = name
-				if name == "ts_ls" then
-					exe = "typescript-language-server"
-				end
-				if name == "lua_ls" then
-					exe = "lua-language-server"
-				end
-				if name == "rust_analyzer" then
-					exe = "rust-analyzer"
-				end
-
-				if vim.fn.executable(exe) == 1 then
-					vim.lsp.enable(name)
-				end
-			end
-
+			-- LSP Attach
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("yin-lsp-attach", { clear = true }),
 				callback = function(event)
 					local bufnr = event.buf
 					local client = vim.lsp.get_client_by_id(event.data.client_id)
+
 					local map = function(mode, lhs, rhs, desc)
 						vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = "LSP: " .. desc })
 					end
 
 					map("n", "gd", vim.lsp.buf.definition, "Goto Definition")
-					-- map("n", "gr", vim.lsp.buf.references, "References")
 					map("n", "gr", function()
 						require("telescope.builtin").lsp_references()
 					end, "References")
 					map("n", "K", vim.lsp.buf.hover, "Hover Documentation")
 					map("n", "<leader>rn", vim.lsp.buf.rename, "Rename")
 					map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, "Code Action")
-
-					-- 💡 現代化診斷整合快捷鍵
 					map("n", "<leader>d", vim.diagnostic.open_float, "Show Line Diagnostics")
 					map("n", "[d", vim.diagnostic.goto_prev, "Previous Diagnostic")
 					map("n", "]d", vim.diagnostic.goto_next, "Next Diagnostic")
@@ -155,17 +201,18 @@ return {
 			})
 
 			vim.diagnostic.config({
-				-- signs = {
-				-- 	text = {
-				-- 		[vim.diagnostic.severity.ERROR] = "✘", -- 紅叉
-				-- 		[vim.diagnostic.severity.WARN] = "▲", -- 黃驚嘆
-				-- 		[vim.diagnostic.severity.INFO] = "●",
-				-- 		[vim.diagnostic.severity.HINT] = "",
-				-- 	},
-				-- },
-				virtual_text = true, -- 在行尾顯示文字提示
+				virtual_text = {
+					spacing = 2,
+					source = "if_many",
+				},
+				signs = true,
 				underline = true,
+				severity_sort = true,
 				update_in_insert = false,
+				float = {
+					border = "rounded",
+					source = "if_many",
+				},
 			})
 		end,
 	},
@@ -175,22 +222,21 @@ return {
 		"stevearc/conform.nvim",
 		event = { "BufWritePre" },
 		opts = {
-			format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
+			format_on_save = { timeout_ms = 500, lsp_format = "prefer" },
 			formatters_by_ft = {
 				lua = { "stylua" },
-				cpp = { "clang_format" },
 				javascript = { "prettier" },
 			},
 		},
 	},
 
-	-- 5. Completion ── blink.cmp
+	-- 5. Completion
 	{
 		"saghen/blink.cmp",
 		version = "*",
 		opts = {
 			keymap = { preset = "super-tab" },
-
+			signature = { enabled = true },
 			completion = {
 				list = {
 					selection = {
@@ -204,20 +250,21 @@ return {
 					auto_brackets = { enabled = false },
 				},
 			},
-
 			sources = {
 				default = { "snippets", "lsp", "path", "buffer" },
 				providers = {
 					snippets = { score_offset = 10 },
 					lsp = { score_offset = 5 },
 					buffer = {
+						score_offset = 0,
 						opts = {
-							max_file_size_bytes = 1024 * 1024, -- 💡 效能優化：不掃描大於 1MB 的檔案
+							get_bufnrs = function()
+								return vim.api.nvim_list_bufs()
+							end,
 						},
 					},
 				},
 			},
-
 			snippets = {
 				preset = "default",
 			},

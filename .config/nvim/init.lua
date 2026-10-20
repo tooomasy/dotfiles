@@ -1,4 +1,5 @@
 require("cores.options")
+require("cores.custom_shortcut")
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
